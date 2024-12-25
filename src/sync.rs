@@ -102,6 +102,10 @@ mod inner {
         {
             f(self.0.get())
         }
+
+        pub fn get_mut(&mut self) -> &mut T {
+            self.0.get_mut()
+        }
     }
 
     pub(crate) mod alloc {

@@ -84,6 +84,11 @@ where
         self.shared[page_index].with_slot(addr, f)
     }
 
+    pub(crate) fn slot_mut(&mut self, idx: usize) -> Option<&mut page::Slot<T, C>> {
+        let (addr, page_index) = page::indices::<C>(idx);
+        self.shared.get_mut(page_index).and_then(|page| page.slot_mut(addr))
+    }
+
     pub(crate) fn new(tid: usize) -> Self {
         let mut total_sz = 0;
         let shared = (0..C::MAX_PAGES)
@@ -288,6 +293,11 @@ where
     }
 
     #[inline]
+    pub(crate) fn get_mut(&mut self, idx: usize) -> Option<&mut Shard<T, C>> {
+        self.shards.get_mut(idx)?.get_mut()
+    }
+
+    #[inline]
     pub(crate) fn current(&self) -> (Tid<C>, &Shard<T, C>) {
         let tid = Tid::<C>::current();
         test_println!("current: {:?}", tid);
@@ -396,6 +406,22 @@ impl<T, C: cfg::Config> Ptr<T, C> {
         };
 
         Some(track.get_ref())
+    }
+
+    #[inline]
+    fn get_mut(&mut self) -> Option<&mut Shard<T, C>> {
+        let ptr = *self.0.get_mut();
+        if ptr.is_null() {
+            return None;
+        }
+        if ptr.is_null() {
+            return None;
+        }
+        let track = unsafe {
+            &mut *ptr
+        };
+
+        Some(track.get_mut())
     }
 
     #[inline]

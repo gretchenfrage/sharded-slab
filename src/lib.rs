@@ -111,7 +111,7 @@
 //!
 //! # Comparison with Similar Crates
 //!
-//! - [`slab`]: Carl Lerche's `slab` crate provides a slab implementation with a
+//! - [`slab`][slabcrate]: Carl Lerche's `slab` crate provides a slab implementation with a
 //!   similar API, implemented by storing all data in a single vector.
 //!
 //!   Unlike `sharded_slab`, inserting and removing elements from the slab
@@ -134,7 +134,7 @@
 //!   concurrent use-cases, while `slab` should be preferred in single-threaded
 //!   use-cases.
 //!
-//! [`slab`]: https://crates.io/crates/loom
+//! [slabcrate]: https://crates.io/crates/slab
 //!
 //! # Safety and Correctness
 //!
@@ -620,6 +620,33 @@ impl<T, C: cfg::Config> Slab<T, C> {
                 key,
             })
         })
+    }
+
+    /// Return a mutable reference to the value associated with the given key.
+    ///
+    /// This call borrows self mutably (at compile-time) which guarantees that we
+    /// possess the only reference.
+    ///
+    /// If the slab does not contain a value for the given key, `None` is returned
+    /// instead.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let mut slab = sharded_slab::Slab::new();
+    /// let key = slab.insert(String::from("hello world")).unwrap();
+    /// slab.get_mut(key).unwrap().push('!');
+    ///
+    /// assert_eq!(*slab.get_mut(key).unwrap(), "hello world!");
+    /// assert!(slab.get_mut(12345).is_none());
+    /// ```
+    pub fn get_mut(&mut self, key: usize) -> Option<&mut T> {
+        let tid = C::unpack_tid(key);
+
+        let shard = self.shards.get_mut(tid.as_usize())?;
+        shard.slot_mut(key).map(|slot|
+            slot.value_mut().as_mut().unwrap()
+        )
     }
 
     /// Return an owned reference to the value at the given index.
